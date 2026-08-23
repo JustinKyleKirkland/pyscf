@@ -17,7 +17,7 @@ import unittest
 import numpy
 import numpy as np
 from pyscf import scf, gto, solvent, mcscf, cc, dft
-from pyscf.solvent import pcm
+from pyscf.solvent import ddcosmo, pcm
 
 def setUpModule():
     global mol, mol0, epsilon
@@ -351,6 +351,11 @@ class NamedSolvent(unittest.TestCase):
         self.assertEqual(cm.solvent, '')
         self.assertAlmostEqual(cm.eps, 78.3553, 12)
         self.assertIsNone(cm.eps_optical)
+
+    def test_water_matches_default_eps(self):
+        # Naming water must not change eps away from the default
+        cm = pcm.PCM(mol0, 'water')
+        self.assertAlmostEqual(cm.eps, ddcosmo.EPS_WATER, 12)
 
     def test_assign_solvent(self):
         cm = pcm.PCM(mol0)

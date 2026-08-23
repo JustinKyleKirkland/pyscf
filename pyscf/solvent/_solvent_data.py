@@ -16,13 +16,15 @@
 '''
 Solvent database shared by the continuum solvation models.
 
-The parameters are taken from the Minnesota Solvent Descriptor Database
-(https://comp.chem.umn.edu/solvation/mnsddb.pdf). They are utilized by the SMD
-model, while the dielectric constant and the refractive index of each solvent
-are also useful for the PCM family models (see pcm.PCM.solvent).
+The parameters are adapted from the Minnesota Solvent Descriptor Database
+(https://comp.chem.umn.edu/solvation/mnsddb.pdf), except for the dielectric
+constant of water, which is the more accurate 78.3553 of ddcosmo.EPS_WATER.
+They are utilized by the SMD model, while the dielectric constant and the
+refractive index of each solvent are also useful for the PCM family models
+(see pcm.PCM.solvent).
 '''
 
-# database from https://comp.chem.umn.edu/solvation/mnsddb.pdf
+# adapted from database https://comp.chem.umn.edu/solvation/mnsddb.pdf
 # solvent name: [n, n25, alpha, beta, gamma, epsilon, phi, psi)
 solvent_db = {
     '1,1,1-trichloroethane':[1.4379, 1.4313, 0.0, 0.09, 36.24, 7.0826, 0.0, 0.60],
@@ -199,7 +201,7 @@ solvent_db = {
     'trichloroethene':[1.4773, 1.4556, 0.08, 0.03, 41.45, 3.422, 0.0, 0.6],
     'triethylamine':[1.4010, 1.3980, 0.0, 0.79, 29.1, 2.3832, 0.0, 0.0],
     'n-undecane':[1.4398, 1.4151, 0.0, 0.0, 34.85, 1.991, 0.0, 0.0],
-    'water':[1.3328, 1.3323, 0.82, 0.35, -1.0, 78.355, -1.0, -1.0],
+    'water':[1.3328, 1.3323, 0.82, 0.35, -1.0, 78.3553, -1.0, -1.0],
     'xylene (mixture)':[1.4995, 1.4969, 0.0, 0.16, 41.38, 2.3879, 0.75, 0.0],
     'm-xylene':[1.4972, 1.4946, 0.0, 0.16, 40.98, 2.3478, 0.75, 0.0],
     'o-xylene':[1.5055, 1.5029, 0.0, 0.16, 42.83, 2.5454, 0.75, 0.0],
