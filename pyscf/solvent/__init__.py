@@ -15,6 +15,8 @@
 from pyscf.solvent import ddcosmo
 from pyscf.solvent import pcm
 from pyscf.solvent import smd
+from pyscf.solvent import noneq
+from pyscf.solvent.noneq import nonequilibrium
 
 def ddCOSMO(method_or_mol, solvent_obj=None, dm=None):
     '''Initialize ddCOSMO model.
