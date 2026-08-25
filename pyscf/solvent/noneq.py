@@ -30,7 +30,12 @@ partition,
 leaves a frozen slow charge that enters the Hamiltonian of the final state as a
 fixed one-electron operator, while the fast charge is solved self-consistently
 at the optical dielectric constant. The decomposition is exact for C-PCM and
-COSMO and well defined for IEF-PCM and SS(V)PE.
+COSMO and well defined for IEF-PCM and SS(V)PE. All four are supported.
+
+SMD is not. Its electrostatics is IEF-PCM and would split cleanly, but its CDS
+term cannot be carried into the final state by this construction. For a
+vertical process that term is identical in both states and cancels from the
+transition energy, so use IEF-PCM directly.
 
 Unlike ``PCM.equilibrium_solvation``, which handles the linear-response
 treatment of excited states, this module applies to state-specific processes
@@ -50,6 +55,8 @@ from pyscf import lib
 from pyscf.lib import logger
 from pyscf.solvent import pcm as _pcm
 from pyscf.solvent import _attach_solvent
+
+_SUPPORTED_METHODS = {'C-PCM', 'CPCM', 'COSMO', 'IEF-PCM', 'IEFPCM', 'SS(V)PE'}
 
 
 class SlowPolarization(lib.StreamObject):
@@ -111,15 +118,39 @@ def build_slow_polarization(mf_ref, eps_optical=None, dm=None):
     Returns:
         A :class:`SlowPolarization` instance.
     '''
+    from pyscf.solvent import smd as _smd
+
     pcmobj = getattr(mf_ref, 'with_solvent', None)
     if pcmobj is None:
         raise RuntimeError(
             'The reference calculation carries no solvent. Run something like '
             'mf = mol.RHF().PCM("water"); mf.run() first.')
+    if isinstance(pcmobj, _smd.SMD):
+        # SMD subclasses PCM, so it would otherwise pass the check below. Its
+        # electrostatics is IEF-PCM and splits cleanly, but its CDS term is a
+        # surface-tension contribution that the frozen-slow construction has no
+        # way to carry into the final state. Leaving it on one side of the
+        # transition energy only would introduce an error of a few kcal/mol,
+        # which is the size of the effect being computed.
+        raise NotImplementedError(
+            'Non-equilibrium solvation with SMD. The CDS term depends only on '
+            'the geometry and the solvent, so for a vertical process it is the '
+            'same in both states and cancels from the transition energy. Run '
+            'the electrostatics with IEF-PCM instead, which is what SMD uses, '
+            'and the result is the same without the risk of an uncancelled '
+            'CDS contribution.')
     if not isinstance(pcmobj, _pcm.PCM):
         raise NotImplementedError(
             f'Non-equilibrium solvation for {type(pcmobj).__name__}. Only the '
             'PCM family implements the Pekar partition.')
+    if pcmobj.method.upper() not in _SUPPORTED_METHODS:
+        raise NotImplementedError(
+            f'Non-equilibrium solvation for method={pcmobj.method!r}. '
+            f'Supported: {", ".join(sorted(_SUPPORTED_METHODS))}.')
+    if pcmobj.eps is None:
+        raise RuntimeError(
+            'The reference solvent has eps=None. Set .eps, or name the solvent '
+            'so that it is taken from the solvent database.')
     if not mf_ref.converged:
         logger.warn(mf_ref, 'Reference state is not converged. The frozen slow '
                     'polarization will be built from an unconverged density.')

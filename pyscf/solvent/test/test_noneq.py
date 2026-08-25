@@ -169,6 +169,36 @@ class KnownValues(unittest.TestCase):
         self.assertRaises(NotImplementedError,
                           noneq.build_slow_polarization, dd)
 
+    def test_all_pcm_families(self):
+        # COSMO, IEF-PCM and SS(V)PE are method strings on the same class, so
+        # the Pekar split applies to all of them, not only C-PCM.
+        cat = _cation(mol)
+        for method in ('C-PCM', 'COSMO', 'IEF-PCM', 'SS(V)PE'):
+            ref = _pcm_rhf(mol, method=method)
+            mf = noneq.nonequilibrium(scf.UHF(cat), ref)
+            mf.conv_tol = 1e-11
+            mf.kernel()
+            self.assertTrue(mf.converged)
+            self.assertEqual(mf.slow_polarization.method, method)
+
+    def test_smd_refused(self):
+        # SMD subclasses PCM, so it would pass an isinstance check. Its CDS
+        # term cannot be carried into the final state, and leaving it on one
+        # side only is an error the size of the effect being computed.
+        from pyscf.solvent import smd
+        sm = smd.SMD(mol)
+        sm.solvent = 'water'
+        fake = scf.RHF(mol)
+        fake.with_solvent = sm
+        fake.converged = True
+        self.assertRaises(NotImplementedError,
+                          noneq.build_slow_polarization, fake)
+
+    def test_eps_none_refused(self):
+        bare = _pcm_rhf(mol)
+        bare.with_solvent.eps = None
+        self.assertRaises(RuntimeError, noneq.build_slow_polarization, bare)
+
     def test_eps_optical_bounds(self):
         ref = _pcm_rhf(mol)
         self.assertRaises(ValueError, noneq.build_slow_polarization,
