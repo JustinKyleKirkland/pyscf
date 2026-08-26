@@ -139,6 +139,38 @@ class KnownValues(unittest.TestCase):
         sub = g.kernel(atmlst=[0, 2])
         self.assertAlmostEqual(abs(sub - ref[[0, 2]]).max(), 0, 9)
 
+    def test_x2c_refused(self):
+        # X2C1eGHF is a mixin over GHF, so it inherits GHF.Gradients. Its
+        # one-electron Hamiltonian is not the spin-free one this module
+        # differentiates, so it has to refuse rather than drop a term.
+        mf = scf.GHF(mol_cs).x2c1e()
+        mf.conv_tol = 1e-10
+        mf.kernel()
+        self.assertRaises(NotImplementedError, mf.nuc_grad_method().kernel)
+
+    def test_soc_refused(self):
+        # A spin-orbit ECP adds a complex, spin-mixing term to hcore whose
+        # derivative is not available here.
+        m = gto.M(atom='I 0 0 0; H 0 0 1.61', basis='sto-3g',
+                  ecp={'I': 'crenbl'}, verbose=0)
+        if not m.has_ecp_soc():
+            self.skipTest('basis set does not provide a spin-orbit ECP')
+        mf = scf.GHF(m)
+        mf.with_soc = True
+        mf.conv_tol = 1e-9
+        mf.kernel()
+        self.assertRaises(NotImplementedError, mf.nuc_grad_method().kernel)
+
+    def test_soc_flag_without_soc_ecp_is_allowed(self):
+        # with_soc alone changes nothing when the molecule has no spin-orbit
+        # ECP, so the gradient must still work.
+        mf = scf.GHF(mol_cs)
+        mf.with_soc = True
+        mf.conv_tol = 1e-11
+        mf.kernel()
+        ref = scf.RHF(mol_cs).run(conv_tol=1e-11).nuc_grad_method().kernel()
+        self.assertAlmostEqual(abs(mf.nuc_grad_method().kernel() - ref).max(), 0, 7)
+
     def test_gks_grad_matches_rks(self):
         for xc in ('lda,vwn', 'pbe', 'b3lyp'):
             mr = dft.RKS(mol_cs, xc=xc)

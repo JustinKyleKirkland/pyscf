@@ -15,6 +15,10 @@
 
 '''
 Non-relativistic generalized Hartree-Fock analytical nuclear gradients
+
+The one-electron Hamiltonian is assumed to be spin-free, so spin-orbit ECPs
+(GHF.with_soc) and the X2C Hamiltonian (GHF.x2c1e()) are rejected rather than
+silently treated as if their extra terms had no geometry dependence.
 '''
 
 import numpy
@@ -60,6 +64,27 @@ def _spin_block_dms(dm):
     return numpy.ascontiguousarray(dm_j), numpy.ascontiguousarray(dm_k)
 
 
+def _check_spin_free_hcore(mf):
+    '''Refuse Hamiltonians whose one-electron part is not spin-free.
+
+    grad_elec contracts the derivative of the spin-free core Hamiltonian with
+    the charge density dm_aa + dm_bb. That is only the whole one-electron
+    gradient when hcore is block diagonal with the same block in each spin
+    channel. Spin-orbit ECPs and the X2C Hamiltonian both break that, and the
+    derivatives of the extra terms are not available here, so the result would
+    silently be missing a contribution rather than being wrong by a little.
+    '''
+    if getattr(mf, 'with_x2c', None) is not None:
+        raise NotImplementedError(
+            'Nuclear gradients for the X2C Hamiltonian. grad.ghf assumes a '
+            'spin-free one-electron Hamiltonian, which X2C is not.')
+    if getattr(mf, 'with_soc', None) and getattr(mf.mol, 'has_ecp_soc',
+                                                 lambda: False)():
+        raise NotImplementedError(
+            'Nuclear gradients with spin-orbit ECPs (with_soc=True). The '
+            'derivative of the ECP spin-orbit term is not implemented, so the '
+            'gradient would be missing that contribution.')
+
 def grad_elec(mf_grad, mo_energy=None, mo_coeff=None, mo_occ=None, atmlst=None):
     '''
     Electronic part of GHF/GKS gradients
@@ -69,6 +94,7 @@ def grad_elec(mf_grad, mo_energy=None, mo_coeff=None, mo_occ=None, atmlst=None):
     '''
     mf = mf_grad.base
     mol = mf_grad.mol
+    _check_spin_free_hcore(mf)
     if mo_energy is None: mo_energy = mf.mo_energy
     if mo_occ is None:    mo_occ = mf.mo_occ
     if mo_coeff is None:  mo_coeff = mf.mo_coeff
